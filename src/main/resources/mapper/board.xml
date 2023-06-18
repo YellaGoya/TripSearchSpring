@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.ssafy.trip.board.model.mapper.BoardMapper">
+	<resultMap type="boardDto" id="article">
+		<result column="group_id" property="groupId" />
+		<result column="article_no" property="articleNo" />
+		<result column="user_id" property="userId" />
+		<result column="name" property="userName" />
+		<result column="subject" property="subject" />
+		<result column="content" property="content" />
+		<result column="hit" property="hit" />
+		<result column="register_time" property="registerTime" />
+		<result column="like" property="like" />
+		<result column="content_id" property="contentId" />
+		<result column="title" property="contentTitle" />
+	</resultMap>
+
+	<!-- sql 검색 조건문 -->
+	<sql id="search">
+		<if test="word != null and word != ''">
+			<if test="key == 'subject'">
+				and subject like concat('%', #{word}, '%')
+			</if>
+			<if test="key == 'content'">
+				and content = #{word}
+			</if>
+		</if>
+	</sql>
+
+	<!-- 게시글 리스트 불러오기 -->
+	<select id="listBoard" parameterType="map" resultMap="article">
+		SELECT b.group_id, b.article_no, b.user_id, b.subject, b.content,
+		b.hit, ai.title as title, 
+		b.register_time, m.name, b.like, b.content_id
+		FROM (board b join members m on b.user_id = m.user_id ) left join attraction_info ai on b.content_id = ai.content_id
+		<where>
+		<if test="groupId != null">
+			AND group_id = #{groupId}
+		</if>
+		<if test="key == 'userId' and word != null and word != ''">
+			and b.user_id = #{word}
+		</if>
+		<if test="key == 'content_id' and word != null and word != ''">
+			and b.content_id = #{word}
+		</if>
+		</where>
+		<include refid="search"></include>
+		ORDER BY b.article_no DESC
+		LIMIT #{start}, #{spp}
+	</select>
+
+	<!-- 총 게시글 수 -->
+	<select id="getTotalArticleCount" parameterType="map"
+		resultType="int">
+		select count(article_no)
+		from board
+		<where>
+			<include refid="search"></include>
+			<if test="groupId != null">
+				AND group_id = #{groupId}
+			</if>
+			<if test="key == 'userId' and word != null and word != ''">
+				and user_id = #{word}
+			</if>
+			<if test="key == 'content_id' and word != null and word != ''">
+				and content_id = #{word}
+			</if>
+		</where>
+	</select>
+
+	<!-- 게시글 조회수 증가 -->
+	<update id="updateHit" parameterType="int">
+		update board
+		set hit = hit +
+		1
+		where article_no = #{articleNo}
+	</update>
+
+	<!-- 게시글 불러오기 -->
+	<select id="detail" parameterType="String" resultMap="article">
+		select
+		b.article_no, b.user_id, b.subject, b.content, b.hit, b.register_time,
+		m.name
+		from board b, members m
+		where b.user_id = m.user_id
+		and b.article_no =
+		#{articleNo}
+	</select>
+
+	<!-- 게시글 삭제 -->
+	<delete id="delete" parameterType="String">
+		delete from board
+		where
+		article_no = #{articleNo}
+	</delete>
+
+	<!-- 게시글 등록 -->
+	<insert id="write" parameterType="boardDto">
+        insert into board (group_id, user_id, subject, content)
+        values(#{groupId}, #{userId}, #{subject}, #{content})
+    </insert>
+    
+	<insert id="writeWithConId" parameterType="boardDto">
+        insert into board (group_id, user_id, subject, content, content_id)
+        values(#{groupId}, #{userId}, #{subject}, #{content}, #{contentId})
+    </insert>
+
+	<!-- 게시글 수정 -->
+	<update id="modify" parameterType="boardDto">
+		update board
+		set subject =
+		#{subject}, content = #{content}
+		where article_no = #{articleNo}
+	</update>
+
+	<!-- 게시글 좋아요 중복 방지 -->
+	<insert id="likeVisited" parameterType="boardDto">
+		insert into visited_board
+		(user_id, article_no, liked) values(#{userId}, #{articleNo}, 1);
+	</insert>
+
+	<!-- 게시글 조회수 증가 -->
+	<update id="updateLike" parameterType="int">
+		update board
+		set `like` =
+		`like` + 1
+		where article_no = #{articleNo}
+	</update>
+
+
+
+</mapper>

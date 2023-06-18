@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.trip.attr.model.mapper.AttrMapper">
+	<resultMap type="AttrDto" id="attraction">
+		<result column="content_id" property="contentid"/>
+		<result column="first_image" property="image"/>
+		<result column="title" property="title"/>
+		<result column="addr1" property="addr"/>
+		<result column="latitude" property="latitude"/>
+		<result column="longitude" property="longitude"/>
+		<result column="overview" property="content"/>
+	</resultMap>
+	
+	<resultMap type="GugunDto" id="gugun">
+		<result column="gugun_code" property="code"/>
+		<result column="gugun_name" property="name"/>
+	</resultMap>
+	
+	<resultMap type="SidoDto" id="sido">
+		<result column="sido_code" property="code"/>
+		<result column="sido_name" property="name"/>
+	</resultMap>
+	
+	<resultMap type="CategoryDto" id="category">
+		<result column="cate_code" property="code"/>
+		<result column="cate_name" property="name"/>
+	</resultMap>
+	
+	
+	<select id="byCategory_gugun" parameterType="map" resultMap="attraction">
+		select content_id, first_image, title, addr1, latitude, longitude
+		from attraction_info
+		where content_type_id = #{cateCode}
+		and sido_code = #{sidoCode}
+		and gugun_code = #{gugunCode}
+	</select>
+	
+	<select id="getSido" resultMap="sido">
+		select sido_code, sido_name
+		from sido
+	</select>
+	
+	<select id="getGugun" parameterType="String" resultMap="gugun">
+		select gugun_code, gugun_name
+		from gugun
+		where sido_code = #{sido}
+	</select>
+	
+	<select id="getCate" resultMap="category">
+		select cate_code, cate_name 
+		from category
+	</select>
+	
+	<select id="findDesc" parameterType="String" resultType="String">
+		select overview
+		from attraction_description
+		where content_id = #{contentid}
+	</select>
+	
+	<!-- 해당 사용자가 좋아요 눌렀는지 확인하는 sql문 -->
+	<select id="isLike" parameterType="AttrLikeDto" resultType="AttrLikeDto">
+		select val as value
+		from attraction_like
+		where user_id = #{userId} and content_id = #{contentId}
+	</select>
+	
+	<!-- 좋아요 토글 -->
+	<update id="likeAttr" parameterType="AttrLikeDto">
+		update attraction_like 
+		set val = if(val = 0, 1, 0)
+		where user_id = #{userId} and content_id = #{contentId}
+	</update>	
+	
+	<!-- 좋아요 insert -->
+	<insert id="insertLike" parameterType="AttrLikeDto">
+		insert into attraction_like
+		(user_id, content_id, val)
+		values (#{userId}, #{contentId}, 1)
+	</insert>
+	
+	<!-- 사용자에 해당하는 좋아요 리스트 불러오기 -->
+	<select id="likeList" parameterType="String" resultMap="attraction">
+		select ai.content_id, ai.first_image, ai.title, ai.addr1, ai.latitude, ai.longitude, ad.overview
+		from attraction_info ai join attraction_like al on ai.content_id = al.content_id
+			join attraction_description ad on al.content_id = ad.content_id
+		where al.val = 1 and al.user_id = #{userId};
+	</select>
+	
+	<!-- 핫플레이스 전체 불러오기 -->
+	<select id="getHotPlace" resultMap="attraction">
+		select ai.content_id, ai.first_image, ai.title, ai.addr1, ai.latitude, ai.longitude, ad.overview
+		from attraction_like al join attraction_description ad on al.content_id = ad.content_id join attraction_info ai on ad.content_id = ai.content_id
+		group by al.content_id
+		order by count(al.content_id) desc limit 100;
+	</select>
+	
+	<!-- 검색 (title == 검색어) -->
+	<select id="search" parameterType="String" resultMap="attraction">
+		select ai.content_id, ai.first_image, ai.title, ai.addr1, ai.latitude, ai.longitude, ad.overview
+		from attraction_info ai join attraction_description ad on ai.content_id = ad.content_id 
+		where ai.title like concat("%", #{searchWord},"%");
+	</select>
+	
+	<!-- 핫플레이스 조건 검색 -->
+	<select id="getHotPlaceByCate" parameterType="map" resultMap="attraction">
+		select ai.content_id, ai.first_image, ai.title, ai.addr1, ai.latitude, ai.longitude, ad.overview
+		from attraction_like al join attraction_description ad on al.content_id = ad.content_id join attraction_info ai on ad.content_id = ai.content_id
+		<where>
+		<if test="sidoCode != null">
+			and ai.sido_code = #{sidoCode}
+		</if>
+		<if test="gugunCode != null">
+			and ai.gugun_code = #{gugunCode}
+		</if>
+		<if test="cateCode != null">
+			and ai.content_type_id = #{cateCode}
+		</if>
+		</where>
+		group by al.content_id
+		order by count(al.content_id) desc limit 100;
+	</select>
+	
+	
+</mapper>

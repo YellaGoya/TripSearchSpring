@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper
+	namespace="com.ssafy.trip.member.model.mapper.MemberMapper">
+
+	<resultMap type="memberDto" id="member">
+		<result column="user_id" property="userId" />
+		<result column="name" property="userName" />
+		<result column="pass" property="userPwd" />
+		<result column="email_id" property="emailId" />
+		<result column="email_domain" property="emailDomain" />
+		<result column="join_date" property="joinDate" />
+		<result column="age" property="age" />
+		<result column="gender" property="gender" />
+		<result column="token" property="token" />
+		<result column="permission" property="permission" />
+
+	</resultMap>
+
+	<insert id="register" parameterType="memberDto">
+		insert into members (name,
+		user_id, pass, email_id, email_domain, age, gender)
+		values
+		(#{userName}, #{userId}, #{userPwd}, #{emailId}, #{emailDomain},
+		#{age}, #{gender})
+	</insert>
+
+	<insert id="registerPermission" parameterType="map">
+		insert into
+		authority_user (user_id, permission)
+		values (#{userId},#{permission})
+	</insert>
+
+	<update id="modify" parameterType="memberDto">
+		update members
+		set name =
+		#{userName}, age = #{age}, gender = #{gender}, email_id = #{emailId},
+		email_domain = #{emailDomain}
+		where user_id = #{userId}
+	</update>
+
+	<update id="modifyPwd" parameterType="memberDto">
+		update members
+		set pass =
+		#{userPwd}
+		where user_id = #{userId}
+	</update>
+
+	<delete id="delete" parameterType="memberDto">
+		delete from members
+		where
+		user_id = #{userId}
+	</delete>
+
+	<select id="login" parameterType="map" resultMap="member">
+		select user_id,
+		name
+		from members
+		where user_id = #{userId} and pass = #{userPwd}
+	</select>
+
+	<select id="find" parameterType="memberDto" resultType="String">
+		select
+		pass as userPwd
+		from members
+		where user_id = #{userId} and email_id =
+		#{emailId} and email_domain = #{emailDomain} and name = #{userName}
+	</select>
+
+	<select id="userInfo" parameterType="String" resultMap="member">
+		select
+		m.name, m.user_id, m.email_id, m.email_domain, m.join_date, m.gender,
+		m.age, a.permission	
+		from members m natural join authority_user a
+		where user_id = #{userId};
+	</select>
+
+
+	<update id="saveRefreshToken" parameterType="map">
+		update members
+		set
+		token = #{token}
+		where user_id = #{userId}
+	</update>
+
+	<select id="getRefreshToken" parameterType="String"
+		resultType="String">
+		select token
+		from members
+		where user_id = #{userId}
+	</select>
+
+	<update id="deleteRefreshToken" parameterType="map">
+		update members
+		set
+		token = #{token, jdbcType=VARCHAR}
+		where user_id = #{userId}
+	</update>
+
+
+</mapper>
